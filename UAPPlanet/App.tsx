@@ -7,6 +7,37 @@ import { Sidebar } from './components/Sidebar';
 import { ViewMode, SelectionData } from './types';
 import { Globe, Radio, Sparkles, Loader2 } from 'lucide-react';
 
+import { useThree } from '@react-three/fiber';
+import { useEffect } from 'react';
+import * as THREE from 'three';
+
+// Component to strictly reset camera on view mode change
+const CameraController: React.FC<{ viewMode: ViewMode }> = ({ viewMode }) => {
+  const { camera, controls } = useThree();
+
+  useEffect(() => {
+    if (controls) {
+      // @ts-ignore
+      controls.reset();
+
+      if (viewMode === ViewMode.EARTH) {
+        camera.position.set(0, 0, 12);
+        // @ts-ignore
+        controls.target.set(0, 0, 0);
+      } else {
+        // Default Galaxy Position
+        camera.position.set(0, 20, 40);
+        // @ts-ignore
+        controls.target.set(0, 0, 0);
+      }
+      // @ts-ignore
+      controls.update();
+    }
+  }, [viewMode, camera, controls]);
+
+  return null;
+};
+
 const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.EARTH);
   const [selectedItem, setSelectedItem] = useState<SelectionData | null>(null);
@@ -34,7 +65,10 @@ const App: React.FC = () => {
             )}
           </Suspense>
 
+          <CameraController viewMode={viewMode} />
           <OrbitControls
+            key={viewMode} // Force re-mount to ensure complete reset of controls state
+            makeDefault // Essential for useThree().controls to work
             enablePan={true}
             minDistance={3.0}
             maxDistance={viewMode === ViewMode.GALAXY ? 100 : 20}
