@@ -14,24 +14,40 @@ import * as THREE from 'three';
 // Component to handle camera reset on view change
 const CameraController: React.FC<{ viewMode: ViewMode }> = ({ viewMode }) => {
   const { camera, controls } = useThree();
+  const galaxyState = React.useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
+  const prevViewMode = React.useRef<ViewMode>(viewMode);
 
   useEffect(() => {
-    if (controls) {
-      // @ts-ignore
-      controls.reset();
+    if (!controls) return;
+    const orbitControls = controls as unknown as { reset: () => void; target: THREE.Vector3; update: () => void };
 
-      if (viewMode === ViewMode.EARTH) {
-        camera.position.set(0, 0, 12);
-        // @ts-ignore
-        controls.target.set(0, 0, 0);
-      } else {
-        camera.position.set(0, 20, 40);
-        // @ts-ignore
-        controls.target.set(0, 0, 0);
-      }
-      // @ts-ignore
-      controls.update();
+    // Transitioning FROM Galaxy TO Earth -> Save State
+    if (prevViewMode.current === ViewMode.GALAXY && viewMode === ViewMode.EARTH) {
+      galaxyState.current = {
+        position: camera.position.clone(),
+        target: orbitControls.target.clone(),
+      };
     }
+
+    // Apply new view settings
+    if (viewMode === ViewMode.EARTH) {
+      orbitControls.reset(); // Reset to default (usually 0,0,0 target)
+      camera.position.set(0, 0, 12);
+      orbitControls.target.set(0, 0, 0);
+    } else if (viewMode === ViewMode.GALAXY) {
+      if (galaxyState.current) {
+        // Restore previous Galaxy state
+        camera.position.copy(galaxyState.current.position);
+        orbitControls.target.copy(galaxyState.current.target);
+      } else {
+        // Default Galaxy view
+        camera.position.set(0, 20, 40);
+        orbitControls.target.set(0, 0, 0);
+      }
+    }
+
+    orbitControls.update();
+    prevViewMode.current = viewMode;
   }, [viewMode, camera, controls]);
 
   return null;
@@ -66,7 +82,6 @@ const App: React.FC = () => {
 
           <CameraController viewMode={viewMode} />
           <OrbitControls
-            key={viewMode} // Force re-mount on view change to reset state
             makeDefault // Register as default controls for useThree
             enablePan={true}
             minDistance={3.0}
