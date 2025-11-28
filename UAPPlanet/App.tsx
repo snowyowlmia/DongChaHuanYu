@@ -66,6 +66,8 @@ const App: React.FC = () => {
 
           <CameraController viewMode={viewMode} />
           <OrbitControls
+            key={viewMode} // Force re-mount on view change to reset state
+            makeDefault // Register as default controls for useThree
             enablePan={true}
             minDistance={3.0}
             maxDistance={viewMode === ViewMode.GALAXY ? 100 : 20}
